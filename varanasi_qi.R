@@ -134,7 +134,8 @@ vqi_postsurvey_stats <- data.frame(
   median = c(
     median(vqi_postsurvey$Q2), median(vqi_postsurvey$Q3),
     median(vqi_postsurvey$Q4), median(vqi_postsurvey$Q5),
-    mean(vqi_postsurvey$Q7, na.rm = TRUE), mean(vqi_postsurvey$Q8, na.rm = TRUE)
+    median(vqi_postsurvey$Q7, na.rm = TRUE),
+    median(vqi_postsurvey$Q8, na.rm = TRUE)
   ),
   sd = c(
     round(sd(vqi_postsurvey$Q2), 2), round(sd(vqi_postsurvey$Q3), 2),
@@ -145,12 +146,12 @@ vqi_postsurvey_stats <- data.frame(
   min = c(
     min(vqi_postsurvey$Q2), min(vqi_postsurvey$Q3),
     min(vqi_postsurvey$Q4), min(vqi_postsurvey$Q5),
-    mean(vqi_postsurvey$Q7, na.rm = TRUE), mean(vqi_postsurvey$Q8, na.rm = TRUE)
+    min(vqi_postsurvey$Q7, na.rm = TRUE), min(vqi_postsurvey$Q8, na.rm = TRUE)
   ),
   max = c(
     max(vqi_postsurvey$Q2), max(vqi_postsurvey$Q3),
     max(vqi_postsurvey$Q4), max(vqi_postsurvey$Q5),
-    mean(vqi_postsurvey$Q7, na.rm = TRUE), mean(vqi_postsurvey$Q8, na.rm = TRUE)
+    max(vqi_postsurvey$Q7, na.rm = TRUE), max(vqi_postsurvey$Q8, na.rm = TRUE)
   )
 )
 
@@ -158,80 +159,144 @@ vqi_postsurvey_stats <- data.frame(
 print("Post-survey statistics")
 print(vqi_postsurvey_stats)
 
-### THEORY 1 ###
-# This assumes everything goes perfectly - all post-test
-# results are perfect (7 or 0)
-
-# Assume Q2, Q3 are all 7, and Q4, Q5 are all 0
-# Perform a t-test to see if the means are different
-
-# Create dummy data
-vqi_presurvey_theory1 <- vqi_presurvey
-vqi_presurvey_theory1$Q2 <- rep(7, nrow(vqi_presurvey_theory1))
-vqi_presurvey_theory1$Q3 <- rep(7, nrow(vqi_presurvey_theory1))
-vqi_presurvey_theory1$Q4 <- rep(0, nrow(vqi_presurvey_theory1))
-vqi_presurvey_theory1$Q5 <- rep(0, nrow(vqi_presurvey_theory1))
-
-# Print the table
-print(vqi_presurvey_theory1)
-
-# Perform t-test
-t_test <- t.test(vqi_presurvey$Q2, vqi_presurvey_theory1$Q2, paired = FALSE)
-print(t_test)
-
-t_test <- t.test(vqi_presurvey$Q3, vqi_presurvey_theory1$Q3, paired = FALSE)
-print(t_test)
-
-t_test <- t.test(vqi_presurvey$Q4, vqi_presurvey_theory1$Q4, paired = FALSE)
-print(t_test)
-
-t_test <- t.test(vqi_presurvey$Q5, vqi_presurvey_theory1$Q5, paired = FALSE)
-print(t_test)
-
-### THEORY 2 ###
-# This assumes all post-test results improve by (delta) from
-# the pre-test results
-
-delta <- 2
-
-# Add 1 to Q2 and Q3 unless it is 7
-vqi_presurvey_theory2 <- vqi_presurvey
-vqi_presurvey_theory2$Q2 <- ifelse(
-  vqi_presurvey_theory2$Q2 > 7 - delta, 7, vqi_presurvey_theory2$Q2 + delta
-)
-vqi_presurvey_theory2$Q3 <- ifelse(
-  vqi_presurvey_theory2$Q3 > 6, 7, vqi_presurvey_theory2$Q3 + delta
+# print table of deltas for Q2, Q3, Q4, Q5
+vqi_deltas <- data.frame(
+  colname = c("Q2 confidence", "Q3 ability", "Q4 no handwash", "Q5 no mask"),
+  delta = c(
+    mean(vqi_postsurvey$Q2) - mean(vqi_presurvey$Q2),
+    mean(vqi_postsurvey$Q3) - mean(vqi_presurvey$Q3),
+    mean(vqi_postsurvey$Q4) - mean(vqi_presurvey$Q4),
+    mean(vqi_postsurvey$Q5) - mean(vqi_presurvey$Q5)
+  )
 )
 
-# Remove 1 from Q4 and Q5 unless it is 0
-vqi_presurvey_theory2$Q4 <- ifelse(
-  vqi_presurvey_theory2$Q4 < delta, 0, vqi_presurvey_theory2$Q4 - delta
+### ANALYSIS ###
+# Perform a t-test to see if the means are different between
+# pre-survey and post-survey for Q2, Q3, Q4, Q5
+
+t_test_table <- data.frame(
+  colname = c("Q2 confidence", "Q3 ability", "Q4 no handwash", "Q5 no mask"),
+  mean = c(
+    mean(vqi_postsurvey$Q2),
+    mean(vqi_postsurvey$Q3),
+    mean(vqi_postsurvey$Q4),
+    mean(vqi_postsurvey$Q5)
+  ),
+  median = c(
+    median(vqi_postsurvey$Q2),
+    median(vqi_postsurvey$Q3),
+    median(vqi_postsurvey$Q4),
+    median(vqi_postsurvey$Q5)
+  ),
+  delta = c(
+    mean(vqi_postsurvey$Q2) - mean(vqi_presurvey$Q2),
+    mean(vqi_postsurvey$Q3) - mean(vqi_presurvey$Q3),
+    mean(vqi_postsurvey$Q4) - mean(vqi_presurvey$Q4),
+    mean(vqi_postsurvey$Q5) - mean(vqi_presurvey$Q5)
+  ),
+  t_statistic = c(
+    t.test(vqi_presurvey$Q2, vqi_postsurvey$Q2,
+      paired = FALSE, alt = "less"
+    )$statistic,
+    t.test(vqi_presurvey$Q3, vqi_postsurvey$Q3,
+      paired = FALSE, alt = "less"
+    )$statistic,
+    t.test(vqi_presurvey$Q4, vqi_postsurvey$Q4,
+      paired = FALSE, alt = "greater"
+    )$statistic,
+    t.test(vqi_presurvey$Q5, vqi_postsurvey$Q5,
+      paired = FALSE, alt = "greater"
+    )$statistic
+  ),
+  p_value = c(
+    t.test(vqi_presurvey$Q2, vqi_postsurvey$Q2,
+      paired = FALSE, alt = "less"
+    )$p.value,
+    t.test(vqi_presurvey$Q3, vqi_postsurvey$Q3,
+      paired = FALSE, alt = "less"
+    )$p.value,
+    t.test(vqi_presurvey$Q4, vqi_postsurvey$Q4,
+      paired = FALSE, alt = "greater"
+    )$p.value,
+    t.test(vqi_presurvey$Q5, vqi_postsurvey$Q5,
+      paired = FALSE, alt = "greater"
+    )$p.value
+  )
 )
-vqi_presurvey_theory2$Q5 <- ifelse(
-  vqi_presurvey_theory2$Q5 < delta, 0, vqi_presurvey_theory2$Q5 - delta
+
+# print the table
+print("T-test results (all data)")
+print(t_test_table)
+
+# Exclude people that have a 4 (neither) in Q6
+vqi_postsurvey_no_neither <- vqi_postsurvey[vqi_postsurvey$Q6 != 4, ]
+
+# Re-run analysis
+t_test_table_no_neither <- data.frame(
+  colname = c("Q2 confidence", "Q3 ability", "Q4 no handwash", "Q5 no mask"),
+  mean = c(
+    mean(vqi_postsurvey_no_neither$Q2),
+    mean(vqi_postsurvey_no_neither$Q3),
+    mean(vqi_postsurvey_no_neither$Q4),
+    mean(vqi_postsurvey_no_neither$Q5)
+  ),
+  median = c(
+    median(vqi_postsurvey_no_neither$Q2),
+    median(vqi_postsurvey_no_neither$Q3),
+    median(vqi_postsurvey_no_neither$Q4),
+    median(vqi_postsurvey_no_neither$Q5)
+  ),
+  delta = c(
+    mean(vqi_postsurvey_no_neither$Q2) - mean(vqi_presurvey$Q2),
+    mean(vqi_postsurvey_no_neither$Q3) - mean(vqi_presurvey$Q3),
+    mean(vqi_postsurvey_no_neither$Q4) - mean(vqi_presurvey$Q4),
+    mean(vqi_postsurvey_no_neither$Q5) - mean(vqi_presurvey$Q5)
+  ),
+  t_statistic = c(
+    t.test(vqi_presurvey$Q2, vqi_postsurvey_no_neither$Q2,
+      paired = FALSE, alt = "less"
+    )$statistic,
+    t.test(vqi_presurvey$Q3, vqi_postsurvey_no_neither$Q3,
+      paired = FALSE, alt = "less"
+    )$statistic,
+    t.test(vqi_presurvey$Q4, vqi_postsurvey_no_neither$Q4,
+      paired = FALSE, alt = "greater"
+    )$statistic,
+    t.test(vqi_presurvey$Q5, vqi_postsurvey_no_neither$Q5,
+      paired = FALSE, alt = "greater"
+    )$statistic
+  ),
+  p_value = c(
+    t.test(vqi_presurvey$Q2, vqi_postsurvey_no_neither$Q2,
+      paired = FALSE, alt = "less"
+    )$p.value,
+    t.test(vqi_presurvey$Q3, vqi_postsurvey_no_neither$Q3,
+      paired = FALSE, alt = "less"
+    )$p.value,
+    t.test(vqi_presurvey$Q4, vqi_postsurvey_no_neither$Q4,
+      paired = FALSE, alt = "greater"
+    )$p.value,
+    t.test(vqi_presurvey$Q5, vqi_postsurvey_no_neither$Q5,
+      paired = FALSE, alt = "greater"
+    )$p.value
+  )
 )
 
-# Print the table
-print(vqi_presurvey_theory2)
-
-# Perform t-test
-t_test <- t.test(vqi_presurvey$Q2, vqi_presurvey_theory2$Q2, paired = FALSE)
-print(t_test)
-
-t_test <- t.test(vqi_presurvey$Q3, vqi_presurvey_theory2$Q3, paired = FALSE)
-print(t_test)
-
-t_test <- t.test(vqi_presurvey$Q4, vqi_presurvey_theory2$Q4, paired = FALSE)
-print(t_test)
-
-t_test <- t.test(vqi_presurvey$Q5, vqi_presurvey_theory2$Q5, paired = FALSE)
-print(t_test)
+# print the table
+print("T-test results (excluding 'neither' in Q6)")
+print(t_test_table_no_neither)
 
 ### CORRELATION ###
 
 # Calculate correlation between Q2, Q3, Q4, Q5, make sure to remove Q1
 vqi_presurvey_corr <- vqi_presurvey[, c("Q2", "Q3", "Q4", "Q5")]
 correlation <- cor(vqi_presurvey_corr)
+print(correlation)
+
+# Calculate post-survey correlation
+vqi_postsurvey_corr <- vqi_postsurvey[, c("Q2", "Q3", "Q4", "Q5", "Q7", "Q8")]
+# i am unsure about the use of pairwise.complete.obs to handle NA values
+correlation <- cor(vqi_postsurvey_corr, use = "pairwise.complete.obs")
 print(correlation)
 
 ### PLOTS ###
@@ -292,6 +357,93 @@ scatterplot_q4_q5 <- ggplot(vqi_presurvey, aes(x = Q4, y = Q5)) +
 # Print the scatterplots
 print(scatterplot_q2_q3)
 print(scatterplot_q4_q5)
+
+## ACTUAL ANALYSIS PLOTS ##
+# Plot before and after for Q2, Q3, Q4, Q5 - scatter plot, show error bars
+# for standard deviation
+# Q2
+# Define the questions you want to plot
+questions <- c("Q2", "Q3", "Q4", "Q5")
+plot_titles <- c("Confidence", "Ability", "No handwash", "No mask")
+
+i <- 0
+
+# Loop through the questions
+for (q in questions) {
+  i <- i + 1
+  # Create the plot for the current question
+  plot <- ggplot(vqi_presurvey, aes(x = 1, y = .data[[q]])) +
+    theme(
+      panel.grid.major = element_blank(), panel.grid.minor = element_blank(),
+      panel.background = element_blank(),
+      axis.line = element_line(colour = "black")
+    ) +
+    # Use .data[[q]] to access column dynamically
+    geom_jitter(
+      color = "lightblue", width = 0.05, height = 0.05, alpha = 0.6
+    ) +
+    geom_errorbar(
+      aes(
+        ymin = mean(
+          vqi_presurvey[[q]]
+        ) - sd(vqi_presurvey[[q]]) / sqrt(nrow(vqi_presurvey)),
+        ymax = mean(
+          vqi_presurvey[[q]]
+        ) + sd(vqi_presurvey[[q]]) / sqrt(nrow(vqi_presurvey))
+      ),
+      width = 0.1
+    ) +
+    stat_summary(fun = mean, geom = "point", size = 4, color = "darkblue") +
+    geom_jitter(
+      data = vqi_postsurvey_no_neither, aes(x = 2, y = .data[[q]]),
+      color = "lightcoral", width = 0.05, height = 0.05, alpha = 0.6
+    ) +
+    geom_errorbar(
+      data = vqi_postsurvey_no_neither,
+      aes(
+        x = 2,
+        ymin = mean(
+          vqi_postsurvey_no_neither[[q]]
+        ) - sd(
+          vqi_postsurvey_no_neither[[q]]
+        ) / sqrt(nrow(vqi_postsurvey_no_neither)),
+        ymax = mean(
+          vqi_postsurvey_no_neither[[q]]
+        ) + sd(
+          vqi_postsurvey_no_neither[[q]]
+        ) / sqrt(nrow(vqi_postsurvey_no_neither))
+      ),
+      width = 0.1
+    ) +
+    stat_summary(
+      data = vqi_postsurvey_no_neither, aes(x = 2, y = .data[[q]]), fun = mean,
+      geom = "point", size = 4, color = "darkred"
+    ) +
+    scale_x_continuous(
+      breaks = c(1, 2),
+      labels = c("Pre-survey", "Post-survey"),
+      limits = c(0.5, 2.5)
+    ) +
+    ggtitle(paste(plot_titles[i], "before and after")) + # Dynamic title
+    xlab("Survey") +
+    ylab(plot_titles[i]) + # Dynamic y-axis label
+    theme(
+      text = element_text(size = 14),
+      axis.title = element_text(size = 16),
+      plot.title = element_text(size = 20, hjust = 0.5)
+    )
+
+  # Print the plot for the current question
+  print(plot)
+
+  # Write plot to output folder
+  ggsave(
+    filename = paste0("./output/", q, "_before_after.png"),
+    plot = plot,
+    width = 5,
+    height = 6
+  )
+}
 
 # Correlation
 
